@@ -57,28 +57,93 @@ end thunderbird_fsm_tb;
 architecture test_bench of thunderbird_fsm_tb is 
 	
 	component thunderbird_fsm is 
---	  port(
-		
---	  );
+     port (
+        i_clk, i_reset  : in    std_logic;
+        i_left, i_right : in    std_logic;
+        o_lights_L      : out   std_logic_vector(2 downto 0);
+        o_lights_R      : out   std_logic_vector(2 downto 0)
+     );
 	end component thunderbird_fsm;
 
 	-- test I/O signals
+	signal w_left : std_logic := '0';
+	signal w_right : std_logic := '0';
+	signal w_reset : std_logic := '0';
+	signal w_clk : std_logic := '0';
+	
+	signal w_tailLights : std_logic_vector(5 downto 0) := "000000";
 	
 	-- constants
-	
+	constant k_clk_period : time := 10 ns;
 	
 begin
 	-- PORT MAPS ----------------------------------------
-	
+	   uut: thunderbird_fsm port map (
+          i_left => w_left,
+          i_right => w_right,
+          i_reset => w_reset,
+          i_clk => w_clk,
+          o_lights_L(0) => w_tailLights(3),
+          o_lights_L(1) => w_tailLights(4),
+          o_lights_L(2) => w_tailLights(5),
+          o_lights_R(0) => w_tailLights(2),
+          o_lights_R(1) => w_tailLights(1),
+          o_lights_R(2) => w_tailLights(0)
+        );
 	-----------------------------------------------------
 	
 	-- PROCESSES ----------------------------------------	
+
     -- Clock process ------------------------------------
-    
+    clk_proc : process
+	begin
+		w_clk <= '0';
+        wait for k_clk_period/2;
+		w_clk <= '1';
+		wait for k_clk_period/2;
+	end process;
 	-----------------------------------------------------
 	
 	-- Test Plan Process --------------------------------
-	
+	-- For my Test bench I do a simple and complete run through of the program.
+	-- I start with a reset then reverse the reset input.
+	-- I follow with a run through of the left and right lights, checking to make sure all three turn on, then off
+	-- when the button is pressed. And I end my test bench by turning all lights on to simulate the hazards blinking on 
+	-- and off.
+	test_bench: process
+	begin
+		-- sequential timing		
+		w_reset <= '1';
+		wait for k_clk_period*1;
+		  assert w_tailLights = "000000" report "bad reset" severity failure;
+		
+		w_reset <= '0';
+		wait for k_clk_period*1;
+		
+		  w_left <= '0'; wait for k_clk_period;
+		assert w_tailLights = "000000" report "All lights should be off" severity failure;
+		  w_left <= '1'; wait for k_clk_period;
+		assert w_tailLights = "001000" report "LA should be on" severity failure;
+		  w_left <= '1'; wait for k_clk_period;
+		assert w_tailLights = "011000" report "LA/B should be on" severity failure;
+		  w_left <= '1'; wait for k_clk_period;
+		assert w_tailLights = "111000" report "LA/B/C should be on" severity failure;
+		  w_left <= '0'; w_right <= '1'; wait for k_clk_period*2;
+		assert w_tailLights = "000100" report "RA should be on" severity failure;
+		  w_right <= '1'; wait for k_clk_period;
+		assert w_tailLights = "000110" report "RA/B should be on" severity failure;
+		  w_right <= '1'; wait for k_clk_period;
+		assert w_tailLights = "000111" report "RA/B/C should be on" severity failure;
+		  w_left <= '1'; w_right <= '1'; wait for k_clk_period*2;
+		assert w_tailLights = "111111" report "ALL should be on" severity failure;
+		  w_left <= '1'; w_right <= '1'; wait for k_clk_period;
+		assert w_tailLights = "000000" report "ALL should blink off" severity failure;
+		
+		
+		
+		
+		
 	-----------------------------------------------------	
 	
-end test_bench;
+end process;
+end;
